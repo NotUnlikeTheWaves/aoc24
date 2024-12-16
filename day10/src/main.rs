@@ -6,7 +6,8 @@ struct Node {
 }
 
 fn main() {
-    println!("Hello, world!");
+    use std::time::Instant;
+    let now = Instant::now();
     let path = Path::new("10.txt");
     let mut file = match File::open(path) {
         Ok(file) => file,
@@ -20,11 +21,9 @@ fn main() {
     let raw_array: Vec<&str> = buffer.split('\n').collect();
     let mut array: Vec<Vec<Rc<RefCell<Node>>>> = raw_array
         .iter()
-        .enumerate()
-        .map(|(y, line)| {
+        .map(|line| {
             line.chars()
-                .enumerate()
-                .map(|(x, c)| {
+                .map(|c| {
                     Rc::new(RefCell::new(Node {
                         outgoing: vec![],
                         value: i8::try_from(c.to_digit(10).unwrap()).unwrap(),
@@ -43,55 +42,49 @@ fn main() {
     let mut trail_starts: Vec<Rc<RefCell<Node>>> = vec![];
 
     for y in 0..height {
-        // println!("{}", array[y].len());
         for x in 0..width {
             let mut this = array[y][x].borrow_mut();
             let my_value = this.value;
             // Add neighbours if they are exactly one more than us, i.e. visitable
             if x != 0 && ((*array[y][x - 1].borrow()).value - my_value) == 1 {
-                print!("a");
                 this.outgoing.push(Rc::clone(&array[y][x - 1]));
             }
             if y != 0 && ((*array[y - 1][x].borrow()).value - my_value) == 1 {
-                print!("b");
                 this.outgoing.push(Rc::clone(&array[y - 1][x]));
             }
             if (x + 1) != width && ((*array[y][x + 1].borrow()).value - my_value) == 1 {
-                print!("c");
                 this.outgoing.push(Rc::clone(&array[y][x + 1]));
             }
             if (y + 1) != height && ((*array[y + 1][x].borrow()).value - my_value) == 1 {
-                print!("d");
                 this.outgoing.push(Rc::clone(&array[y + 1][x]));
             }
-            println!("");
 
             // If we are at a start of a trailhead, add
-            // print!("{}", my_value);
             if my_value == 0 {
                 trail_starts.push(Rc::clone(&array[y][x]));
             }
         }
-        // println!("");
-        // println!("Trail_starts: {}", trail_starts.len());
     }
 
-    let mut unique_visited_ends: Vec<Rc<RefCell<Node>>> = vec![];
-    let total_trail_options: u32 = trail_starts
-        .iter()
-        .map(|start| find_trail_end(start, &mut unique_visited_ends))
-        .sum();
+    let (unique_trail_options, total_trail_options) =
+        trail_starts.iter().fold((0, 0), |(unique, total), start| {
+            let mut unique_visited_ends: Vec<Rc<RefCell<Node>>> = vec![];
+            let count = find_trail_end(start, &mut unique_visited_ends);
+            if count > 0 {
+                return (unique + unique_visited_ends.len(), total + count);
+            }
+            return (unique, total);
+        });
 
+    let elapsed = now.elapsed();
+    println!("Elapsed: {:.2?}", elapsed);
     println!("If you see this, the program terminates. This is good.");
-    println!("Unique 0-9 trails: {}", unique_visited_ends.len());
+    println!("Unique 0-9 trails: {}", unique_trail_options);
     println!("Total 0-9 trails: {}", total_trail_options);
-    println!("Goodbye!")
 }
 
 fn find_trail_end(node: &Rc<RefCell<Node>>, ends: &mut Vec<Rc<RefCell<Node>>>) -> u32 {
     let n = node.borrow();
-    // println!("call: {}", n.value);
-    // println!("neigh: {}", n.outgoing.len());
     if n.value == 9 {
         if !(ends.iter().any(|x| Rc::ptr_eq(&x, node))) {
             ends.push(Rc::clone(node));
