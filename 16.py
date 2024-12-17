@@ -17,10 +17,8 @@ class Node:
 
 @dataclass
 class Position:
-    up: Node
-    down: Node
-    left: Node
-    right: Node
+    updown: Node
+    leftright: Node
 
 f = open("16.txt", "r")
 lines = f.readlines()
@@ -34,21 +32,12 @@ def addUndirectedEdge(a: Node, b: Node, weight: int):
     b.connects.append((a, weight))
 
 def genDirectionalNode() -> Position:
-    up = Node([])
-    down = Node([])
-    left = Node([])
-    right = Node([])
-    addUndirectedEdge(up, left, TURN_PENALTY)
-    addUndirectedEdge(up, right, TURN_PENALTY)
-    addUndirectedEdge(down, left, TURN_PENALTY)
-    addUndirectedEdge(down, right, TURN_PENALTY)
-    addUndirectedEdge(up, down, 0)
-    addUndirectedEdge(left, right, 0)
-    position = Position(up, down, left, right)
-    up.position = position
-    down.position = position
-    left.position = position
-    right.position = position
+    updown = Node([])
+    leftright = Node([])
+    addUndirectedEdge(updown, leftright, TURN_PENALTY)
+    position = Position(updown, leftright)
+    updown.position = position
+    leftright.position = position
     return position
 
 def connectToGrid(a: Position, x: int, y: int):
@@ -56,11 +45,11 @@ def connectToGrid(a: Position, x: int, y: int):
     if x > 0:
         b = position_grid[y][x-1]
         if isinstance(b, Position):
-            addUndirectedEdge(a.left, b.right, STEP_PENALTY)
+            addUndirectedEdge(a.leftright, b.leftright, STEP_PENALTY)
     if y > 0:
         b = position_grid[y-1][x]
         if isinstance(b, Position):
-            addUndirectedEdge(a.up, b.down, STEP_PENALTY)
+            addUndirectedEdge(a.updown, b.updown, STEP_PENALTY)
 
 start = None
 end = None
@@ -78,7 +67,7 @@ for y in range(len(grid)):
             case Spaces.START:
                 position = genDirectionalNode()
                 node_row.append(position)
-                start = position.right
+                start = position.leftright
             case Spaces.END:
                 end = genDirectionalNode()
                 node_row.append(end)
@@ -98,18 +87,12 @@ for y in range(len(position_grid)):
         # print(f"{x=} {y=}")
         if isinstance(position, Position):
             connectToGrid(position, x, y)
-            dist[id(position.up)] = math.inf
-            prev[id(position.up)] = None
-            dist[id(position.down)] = math.inf
-            prev[id(position.down)] = None
-            dist[id(position.left)] = math.inf
-            prev[id(position.left)] = None
-            dist[id(position.right)] = math.inf
-            prev[id(position.right)] = None
-            Q.append(position.up)
-            Q.append(position.down)
-            Q.append(position.left)
-            Q.append(position.right)
+            dist[id(position.updown)] = math.inf
+            prev[id(position.updown)] = None
+            dist[id(position.leftright)] = math.inf
+            prev[id(position.leftright)] = None
+            Q.append(position.updown)
+            Q.append(position.leftright)
 
 dist[id(start)] = 0
 # prev[id(start)] = None # likely not necessary
@@ -130,15 +113,15 @@ while len(Q) > 0:
 
 print("Done with bulding the map")
 
-print(dist[id(end.down)])
-print(dist[id(end.up)])
-print(dist[id(end.left)])
-print(dist[id(end.right)])
+print(dist[id(end.updown)])
+print(dist[id(end.leftright)])
 
-final_node = end.down if dist[id(end.down)] < dist[id(end.left)] else end.left
+final_node = end.updown if dist[id(end.updown)] < dist[id(end.leftright)] else end.leftright
+
 
 rev_set: Set[Position] = set()
-def walk_back(me: Node):
+check_list: List[Position] = list()
+def walk_back(me: Node, idx: int):
     rev_set.add(id(me.position))
     if dist[id(me)] == 0: # If we are at the start
         return
@@ -146,8 +129,10 @@ def walk_back(me: Node):
     previous_distance: int = dist[id(previous)]
     my_distance: int = dist[id(me)]
     for (c, edge_length) in me.connects: # All with optimal path should end on this node with the same distance
-        if (previous_distance + edge_length == my_distance):
-            walk_back(c)
+        print(f"A: {idx}")
+        if (dist[id(c)] + edge_length == my_distance):
+            print(f"{previous_distance=} {edge_length=} {my_distance=}")
+            walk_back(c, idx+1)
         # elif edge_length == 0:
 
 
@@ -170,7 +155,7 @@ def printWithDist():
         position: Position | None
         for position in row:
             if isinstance(position, Position):
-                print(str(min(dist[id(position.down)], dist[id(position.left)])).zfill(5), end="")
+                print(str(min(dist[id(position.updown)], dist[id(position.leftright)])).zfill(5), end="")
             else:
                 print('#####', end="")
             print("  ", end="")
@@ -178,10 +163,10 @@ def printWithDist():
 
     
 
-walk_back(final_node)
+walk_back(final_node, 0)
 
-printWithWalkback()
-printWithDist()
+# printWithWalkback()
+# printWithDist()
 print(rev_set)
 print(len(rev_set))
 print(max(dist.values()))
