@@ -15,6 +15,27 @@ main = do
     print $ execProgram regs program 0
     -- print $ execInstr regs program 0
 
+    print "Trying to find solution"
+    print $ findProgram 0 
+
+findProgram :: Int -> [Int]
+findProgram start_at
+    | (snd (exec start_at) == program) = [start_at]
+    | otherwise = let
+            mutations = map exec [start_at * 8 .. start_at * 8 + 7]
+            options = filter (\t -> (snd t) == list_end) mutations
+            option_starts = map fst options
+      in case option_starts of
+            [] -> []
+            o -> concat $ map findProgram option_starts
+    where   program = [2,4,1,1,7,5,4,7,1,4,0,3,5,5,3,0]
+            exec a = (a, execProgram [a, 0, 0] program 0)
+            find_length = case start_at of
+                0->     1
+                _->     (floor ((log $ fromIntegral start_at) / (log 8))) + 2
+            drop_length = (length program) - (find_length)
+            list_end = drop drop_length program
+
 
 --  Registers, program, instruction counter -> return output of the program
 execProgram :: [Int] -> [Int] -> Int -> [Int]
