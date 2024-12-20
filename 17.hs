@@ -30,6 +30,9 @@ findProgram start_at
             o -> concat $ map findProgram option_starts
     where   program = [2,4,1,1,7,5,4,7,1,4,0,3,5,5,3,0]
             exec a = (a, execProgram [a, 0, 0] program 0)
+            -- Need to init to 1 if at 0, i.e. nothing here yet
+            -- (this is technically a bug since 0 could be a valid program start, but w/e)
+            -- Otherwise find number of 3-bits required, floor it, add 1 for the start_at and another for the newly expected list item
             find_length = case start_at of
                 0->     1
                 _->     (floor ((log $ fromIntegral start_at) / (log 8))) + 2
